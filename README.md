@@ -16,3 +16,6 @@ ESP32-S3 <--- USB OTG Adapter ---> USB Printer
 3. Use the IP address and port 9100
 4. Print from any application
   
+
+Board used: [ESP32-S3 SuperMini](https://www.aliexpress.com/item/1005006406538478.html)
+
