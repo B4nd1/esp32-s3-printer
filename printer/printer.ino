@@ -32,7 +32,7 @@ public:
         isReady = false;
         deviceHandle = devHdl;
 
-        Serial0.println("Scanning USB Descriptors...");
+        Serial.println("Scanning USB Descriptors...");
         
         while (p < end) {
             if (p[1] == USB_B_DESCRIPTOR_TYPE_INTERFACE) {
@@ -40,7 +40,7 @@ public:
                 interfaceNumber = intf->bInterfaceNumber;
                 
                 if (intf->bInterfaceClass == 0x07) {
-                    Serial0.printf("Found Printer Interface: %d\n", interfaceNumber);
+                    Serial.printf("Found Printer Interface: %d\n", interfaceNumber);
                     
                     const uint8_t *ep_p = p + intf->bLength;
                     while (ep_p < end && ep_p[1] != USB_B_DESCRIPTOR_TYPE_INTERFACE) {
@@ -50,7 +50,7 @@ public:
                                 ((ep->bEndpointAddress & 0x80) == 0)) {
                                 
                                 outEndpointAddress = ep->bEndpointAddress;
-                                Serial0.printf("Found Bulk OUT Endpoint: 0x%02X\n", outEndpointAddress);
+                                Serial.printf("Found Bulk OUT Endpoint: 0x%02X\n", outEndpointAddress);
                                 isReady = true;
                                 return true;
                             }
@@ -88,7 +88,7 @@ void client_event_callback(const usb_host_client_event_msg_t *event_msg, void *a
             if (myPrinter.discoverPrinter(devHdl)) {
                 usb_host_interface_claim(ClientHandle, devHdl, myPrinter.interfaceNumber, 0);
                 currentState = READY;
-                Serial0.println("Printer Status: READY");
+                Serial.println("Printer Status: READY");
             } else {
                 usb_host_device_close(ClientHandle, devHdl);
             }
@@ -98,7 +98,7 @@ void client_event_callback(const usb_host_client_event_msg_t *event_msg, void *a
         myPrinter.isReady = false;
         myPrinter.deviceHandle = NULL;
         currentState = SEARCHING;
-        Serial0.println("Printer Disconnected.");
+        Serial.println("Printer Disconnected.");
     }
 }
 
@@ -130,13 +130,25 @@ void updateLED() {
 
 void setup() {
     pinMode(LED_PIN, OUTPUT);
-    Serial0.begin(115200, SERIAL_8N1, 44, 43);
+    Serial.begin(115200);
     
+    // Wait a brief moment for serial to initialize
+    delay(1000);
+    Serial.println("\n--- Starting Printer Server ---");
+    Serial.print("Connecting to WiFi: ");
+    Serial.println(ssid);
+
     WiFi.begin(ssid, password);
     while (WiFi.status() != WL_CONNECTED) {
         delay(500);
         updateLED(); 
+        Serial.print(".");
     }
+    
+    Serial.println("\nWiFi Connected!");
+    Serial.print("Printer IP Address: ");
+    Serial.println(WiFi.localIP());
+    
     wifiServer.begin();
     
     const usb_host_config_t host_config = { .skip_phy_setup = false, .intr_flags = ESP_INTR_FLAG_LEVEL1 };
@@ -156,17 +168,29 @@ void loop() {
     updateLED();
 
     WiFiClient newClient = wifiServer.available();
-    if (newClient) wifiClient = newClient;
+    if (newClient) {
+        if (!wifiClient || !wifiClient.connected()) {
+            wifiClient = newClient;
+            Serial.println("New Print Job Connection Received!");
+            if (!myPrinter.isReady) {
+                Serial.println("WARNING: Client connected but Printer is NOT READY!");
+            }
+        }
+    }
 
     if (wifiClient && wifiClient.connected()) {
         if (wifiClient.available()) {
             uint8_t buffer[512]; 
             int len = wifiClient.read(buffer, sizeof(buffer));
-            if (len > 0 && myPrinter.isReady) {
-                currentState = PRINTING;
-                myPrinter.send(buffer, len);
-                delay(10); 
-                currentState = READY;
+            if (len > 0) {
+                if (myPrinter.isReady) {
+                    currentState = PRINTING;
+                    myPrinter.send(buffer, len);
+                    delay(10); 
+                    currentState = READY;
+                } else {
+                    Serial.println("Error: Received data, but printer is not connected/ready. Discarding.");
+                }
             }
         }
     }
