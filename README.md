@@ -8,8 +8,8 @@ Install the ESP32 from the library manager
 - Board: ESP32S3 Dev Module
 - PSRAM: OPI PSRAM (If your board version has it, otherwise "Disabled")
 
-[!IMPORTANT]
-Don't forget to change the WiFi settings in the code to match your WiFi network.
+> [!IMPORTANT]
+> Don't forget to change the WiFi settings in the code to match your WiFi network.
 
 ### Connecting the Printer
 #### General:
