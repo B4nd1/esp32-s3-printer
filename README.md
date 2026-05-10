@@ -8,6 +8,8 @@ Install the ESP32 from the library manager
 - Board: ESP32S3 Dev Module
 - PSRAM: OPI PSRAM (If your board version has it, otherwise "Disabled")
 
+[!IMPORTANT]
+Don't forget to change the WiFi settings in the code to match your WiFi network.
 
 ### Connecting the Printer
 #### General:
@@ -40,7 +42,10 @@ Install the ESP32 from the library manager
 2. Add the ESP32-S3 as a network printer on your computer
 3. Use the IP address and port 9100
 4. Print from any application
-  
+
+### Known issues
+* The print job in the windows queue does not clear when the job has been finished.
+
 
 ### Boards used:
 
